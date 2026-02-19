@@ -1,10 +1,11 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
-import DagHero from "./DagHero";
+
+const DagHero = React.lazy(() => import("./DagHero"));
 
 const DEFAULT_SCALE = 0.4;
 const DEFAULT_API_URL = "https://kgi.kaspad.net:3147";
-const DEFAULT_SNAPSHOT_REPLAY_URL = "/replay/mainnet-60s.json";
+const DEFAULT_SNAPSHOT_REPLAY_URL = "/replay/mainnet-60s-compressed.json";
 const DEFAULT_REPLAY_URL = "/replay/ghostdag-10bps-k18.json";
 
 type AppMode = "api" | "snapshot" | "replay";
@@ -89,11 +90,30 @@ function App() {
         color: "#fff",
       }}
     >
-      <DagHero
-        style={{ position: "absolute", inset: 0 }}
-        scale={appConfig.scale}
-        {...dagProps}
-      />
+      <Suspense
+        fallback={
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#b5b5b5",
+              fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+              fontSize: 14,
+            }}
+          >
+            Loading DAG visualizer...
+          </div>
+        }
+      >
+        <DagHero
+          style={{ position: "absolute", inset: 0 }}
+          scale={appConfig.scale}
+          {...dagProps}
+        />
+      </Suspense>
     </div>
   );
 }

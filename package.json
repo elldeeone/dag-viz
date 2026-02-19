@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "record:snapshot": "node scripts/record-snapshot.mjs",
-    "record:mainnet-60s": "node scripts/record-snapshot.mjs --api-url https://kgi.kaspad.net:3147 --duration-ms 60000 --poll-interval-ms 200 --height-difference 14 --out public/replay/mainnet-60s.json --compressed-out public/replay/mainnet-60s-compressed.json"
+    "record:mainnet-60s": "node scripts/record-snapshot.mjs --api-url https://kgi.kaspad.net:3147 --duration-ms 60000 --poll-interval-ms 200 --height-difference 14 --out debug/replay/mainnet-60s.json --compressed-out public/replay/mainnet-60s-compressed.json",
+    "perf:check": "npm run build && node scripts/check-perf-budget.mjs"
   },
   "dependencies": {
     "@createjs/tweenjs": "2.0.0-beta.4",

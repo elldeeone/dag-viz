@@ -7,7 +7,7 @@ const DEFAULT_API_URL = "https://kgi.kaspad.net:3147";
 const DEFAULT_DURATION_MS = 60_000;
 const DEFAULT_POLL_INTERVAL_MS = 200;
 const DEFAULT_HEIGHT_DIFFERENCE = 14;
-const DEFAULT_OUT_PATH = "public/replay/mainnet-60s.json";
+const DEFAULT_OUT_PATH = "debug/replay/mainnet-60s.json";
 
 const COLOR_TO_CODE = {
   blue: 0,
@@ -25,8 +25,8 @@ Options:
   --duration-ms <ms>         Total recording duration (default: ${DEFAULT_DURATION_MS})
   --poll-interval-ms <ms>    Poll interval (default: ${DEFAULT_POLL_INTERVAL_MS})
   --height-difference <n>    heightDifference query value (default: ${DEFAULT_HEIGHT_DIFFERENCE})
-  --out <path>               Output path for full snapshot JSON (default: ${DEFAULT_OUT_PATH})
-  --compressed-out <path>    Optional output path for compressed v2 JSON
+  --out <path>               Output path for full snapshot JSON (debug artifact, default: ${DEFAULT_OUT_PATH})
+  --compressed-out <path>    Optional output path for compressed v2 JSON (recommended for production)
   --fixed-rate               Use fixed schedule polling (default is live-compatible cadence)
   --pretty                   Pretty-print JSON output
   --help                     Show this help
@@ -37,7 +37,7 @@ Examples:
     --duration-ms 60000 \\
     --poll-interval-ms 200 \\
     --height-difference 14 \\
-    --out public/replay/mainnet-60s.json \\
+    --out debug/replay/mainnet-60s.json \\
     --compressed-out public/replay/mainnet-60s-compressed.json
 `);
 };
