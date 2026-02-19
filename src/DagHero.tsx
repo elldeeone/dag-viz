@@ -1,23 +1,60 @@
 import { useEffect, useRef } from "react";
 import HeroDag from "./dag/HeroDag";
 
+const DEFAULT_API_URL = "https://kgi.kaspad.net:3147";
+const DEFAULT_API_PORT = "3147";
+
+const URL_SCHEME_REGEX = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//;
+
+const normalizeApiUrl = (rawUrl: string): string => {
+  const trimmedUrl = rawUrl.trim();
+  if (!trimmedUrl) return DEFAULT_API_URL;
+
+  const withScheme = URL_SCHEME_REGEX.test(trimmedUrl)
+    ? trimmedUrl
+    : `https://${trimmedUrl}`;
+
+  try {
+    const url = new URL(withScheme);
+
+    if (!url.port && url.hostname === "kgi.kaspad.net") {
+      url.port = DEFAULT_API_PORT;
+    }
+
+    if (url.pathname === "/") {
+      url.pathname = "";
+    } else {
+      url.pathname = url.pathname.replace(/\/+$/, "");
+    }
+
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_API_URL;
+  }
+};
+
 interface DagHeroProps {
   apiUrl?: string;
   replayUrl?: string;
+  snapshotReplayUrl?: string;
+  snapshotPlaybackRate?: number;
   scale?: number;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export default function DagHero({
-  apiUrl = "https://kgi.kaspad.net:3147",
+  apiUrl = DEFAULT_API_URL,
   replayUrl,
+  snapshotReplayUrl,
+  snapshotPlaybackRate = 1,
   scale = 0.4,
   className,
   style,
 }: DagHeroProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dagRef = useRef<HeroDag | null>(null);
+  const normalizedApiUrl = apiUrl ? normalizeApiUrl(apiUrl) : undefined;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -37,10 +74,16 @@ export default function DagHero({
 
     dag.initialize(canvas);
 
-    if (replayUrl) {
-      dag.loadReplay(replayUrl);
-    } else if (apiUrl) {
-      dag.loadAPI(apiUrl);
+    if (snapshotReplayUrl) {
+      dag.loadSnapshotReplay(snapshotReplayUrl, snapshotPlaybackRate).catch((error) => {
+        console.error("[DAG Hero] Snapshot replay failed", error);
+      });
+    } else if (replayUrl) {
+      dag.loadReplay(replayUrl).catch((error) => {
+        console.error("[DAG Hero] Replay failed", error);
+      });
+    } else if (normalizedApiUrl) {
+      dag.loadAPI(normalizedApiUrl);
     }
 
     return () => {
@@ -50,7 +93,7 @@ export default function DagHero({
         canvas.parentNode.removeChild(canvas);
       }
     };
-  }, [apiUrl, replayUrl, scale]);
+  }, [normalizedApiUrl, replayUrl, snapshotPlaybackRate, snapshotReplayUrl, scale]);
 
   return (
     <div

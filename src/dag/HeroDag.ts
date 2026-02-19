@@ -3,16 +3,18 @@ import { Ticker } from "@createjs/core";
 import HeroTimeline from "./HeroTimeline";
 import ReplayDataSource from "../data/ReplayDataSource";
 import APIDataSource from "../data/APIDataSource";
+import SnapshotReplayDataSource from "../data/SnapshotReplayDataSource";
 import { heroTheme } from "./theme";
-import type { ReplayData } from "../data/types";
+import type { BlocksAndEdgesAndHeightGroups, ReplayData } from "../data/types";
 
-type DataSource = ReplayDataSource | APIDataSource;
+type DataSource = ReplayDataSource | APIDataSource | SnapshotReplayDataSource;
 
 export default class HeroDag {
   private application: PIXI.Application | undefined;
   private timeline: HeroTimeline | undefined;
   private dataSource: DataSource | undefined;
   private tickId: number | undefined;
+  private lastRenderedData: BlocksAndEdgesAndHeightGroups | null = null;
 
   private currentScale: number;
   private currentWidth: number = 0;
@@ -67,6 +69,7 @@ export default class HeroDag {
   }
 
   loadAPI(apiUrl: string) {
+    console.info(`[DAG Hero] Live API mode: ${apiUrl}`);
     const ds = new APIDataSource(apiUrl);
     this.dataSource = ds;
     ds.startPolling(14);
@@ -74,7 +77,12 @@ export default class HeroDag {
   }
 
   async loadReplay(url: string) {
+    console.info(`[DAG Hero] Replay mode: ${url}`);
     const resp = await fetch(url);
+    if (!resp.ok) {
+      throw new Error(`Replay fetch failed (${resp.status} ${resp.statusText})`);
+    }
+
     const replayData: ReplayData = await resp.json();
     const ds = new ReplayDataSource(replayData);
     this.dataSource = ds;
@@ -83,6 +91,22 @@ export default class HeroDag {
       // Debounce - only update on tick
     });
 
+    this.run();
+  }
+
+  async loadSnapshotReplay(url: string, playbackRate: number = 1) {
+    console.info(
+      `[DAG Hero] Snapshot replay mode: ${url} (speed=${playbackRate}x)`
+    );
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      throw new Error(
+        `Snapshot replay fetch failed (${resp.status} ${resp.statusText})`
+      );
+    }
+
+    const replayData = await resp.json();
+    this.dataSource = new SnapshotReplayDataSource(replayData, playbackRate);
     this.run();
   }
 
@@ -121,6 +145,7 @@ export default class HeroDag {
 
   private run() {
     window.clearTimeout(this.tickId);
+    this.lastRenderedData = null;
     this.tick();
   }
 
@@ -135,7 +160,8 @@ export default class HeroDag {
       maxBlockAmountOnHalfTheScreen + heightDifference
     );
 
-    if (data) {
+    if (data && data !== this.lastRenderedData) {
+      this.lastRenderedData = data;
       let maxHeight = 0;
       for (const block of data.blocks) {
         if (block.height > maxHeight) maxHeight = block.height;
@@ -156,8 +182,11 @@ export default class HeroDag {
 
   stop() {
     window.clearTimeout(this.tickId);
+    this.tickId = undefined;
+    this.lastRenderedData = null;
     this.observer?.disconnect();
     this.dataSource?.destroy();
+    this.dataSource = undefined;
     if (this.application) {
       this.application.stop();
       // Don't pass true to destroy() - we manage canvas removal in React
