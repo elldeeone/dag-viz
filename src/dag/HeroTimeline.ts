@@ -10,6 +10,10 @@ import HeroBlockSprite from "./BlockSprite";
 import HeroEdgeSprite from "./EdgeSprite";
 import { heroTheme } from "./theme";
 
+const SPRITE_FADE_MS = 500;
+const BLOCK_MOVE_MS = 500;
+const EDGE_FOLLOW_BUFFER_MS = 64;
+
 export default class HeroTimeline extends PIXI.Container {
   private readonly application: PIXI.Application;
   private readonly edgeContainer: PIXI.Container;
@@ -26,6 +30,7 @@ export default class HeroTimeline extends PIXI.Container {
   private edgeKeysToEdges: { [key: string]: Edge } = {};
   private heightKeysToHeightGroups: { [key: string]: HeightGroup } = {};
   private targetHeight: number = -1;
+  private edgeFollowUntilMs: number = 0;
 
   private scaleGetter: () => number;
 
@@ -41,6 +46,8 @@ export default class HeroTimeline extends PIXI.Container {
 
     this.blockContainer = new PIXI.Container();
     this.addChild(this.blockContainer);
+
+    this.application.ticker.add(this.syncEdgesWithBlocks);
   }
 
   setScaleGetter(getter: () => number) {
@@ -104,7 +111,7 @@ export default class HeroTimeline extends PIXI.Container {
         this.blockKeysToBlockSprites[key] = sprite;
         this.blockContainer.addChild(sprite);
         sprite.alpha = 0.0;
-        Tween.get(sprite).to({ alpha: 1.0 }, 500);
+        Tween.get(sprite).to({ alpha: 1.0 }, SPRITE_FADE_MS);
       }
     }
 
@@ -130,7 +137,7 @@ export default class HeroTimeline extends PIXI.Container {
         this.edgeKeysToEdgeSprites[edgeKey] = sprite;
         this.edgeContainer.addChild(sprite);
         sprite.alpha = 0.0;
-        Tween.get(sprite).to({ alpha: 1.0 }, 500);
+        Tween.get(sprite).to({ alpha: 1.0 }, SPRITE_FADE_MS);
       }
     }
 
@@ -150,61 +157,8 @@ export default class HeroTimeline extends PIXI.Container {
     const rendererHeight = this.getDisplayHeight();
     const blockSize = this.calculateBlockSize(rendererHeight);
     const marginX = this.calculateMarginX(blockSize);
+    let startedBlockTween = false;
 
-    // Edges
-    for (const [, edge] of Object.entries(this.edgeKeysToEdges)) {
-      const edgeSprite =
-        this.edgeKeysToEdgeSprites[`${edge.fromBlockId}-${edge.toBlockId}`];
-      if (!edgeSprite) continue;
-
-      const fromHG =
-        this.heightKeysToHeightGroups[`${edge.fromHeight};`];
-      const toHG =
-        this.heightKeysToHeightGroups[`${edge.toHeight};`];
-      if (!fromHG || !toHG) continue;
-
-      const fromY = this.calculateBlockSpriteY(
-        edge.fromHeightGroupIndex,
-        fromHG.size,
-        rendererHeight,
-        blockSize
-      );
-      const toY = this.calculateBlockSpriteY(
-        edge.toHeightGroupIndex,
-        toHG.size,
-        rendererHeight,
-        blockSize
-      );
-      const fromX = this.calculateBlockSpriteX(
-        edge.fromHeight,
-        blockSize,
-        marginX
-      );
-      const toX = this.calculateBlockSpriteX(
-        edge.toHeight,
-        blockSize,
-        marginX
-      );
-
-      const vectorX = toX - fromX;
-      const vectorY = toY - fromY;
-      const { blockBoundsVectorX, blockBoundsVectorY } =
-        HeroBlockSprite.clampVectorToBounds(blockSize, vectorX, vectorY);
-
-      edgeSprite.setVector(
-        vectorX,
-        vectorY,
-        blockSize,
-        marginX,
-        blockBoundsVectorX,
-        blockBoundsVectorY
-      );
-      edgeSprite.setToY(toY);
-      edgeSprite.x = fromX;
-      edgeSprite.y = fromY;
-    }
-
-    // Blocks
     for (const [key, block] of Object.entries(this.blockKeysToBlocks)) {
       const sprite = this.blockKeysToBlockSprites[key];
       if (!sprite) continue;
@@ -227,9 +181,16 @@ export default class HeroTimeline extends PIXI.Container {
         if (!wasSet || !animate) {
           sprite.y = targetY;
         } else {
-          Tween.get(sprite).to({ y: targetY }, 500, Ease.quadOut);
+          startedBlockTween = true;
+          Tween.get(sprite).to({ y: targetY }, BLOCK_MOVE_MS, Ease.quadOut);
         }
       }
+    }
+
+    this.recalculateEdgeSpritePositions(blockSize, marginX);
+
+    if (startedBlockTween) {
+      this.markEdgeFollowWindow(BLOCK_MOVE_MS);
     }
   }
 
@@ -255,7 +216,7 @@ export default class HeroTimeline extends PIXI.Container {
     if (this.targetHeight >= 0) {
       const targetX = rendererWidth / 2 - blockSpriteXForTarget;
       if (Math.abs(this.x - targetX) < rendererWidth) {
-        Tween.get(this).to({ x: targetX }, 500, Ease.quadOut);
+        Tween.get(this).to({ x: targetX }, BLOCK_MOVE_MS, Ease.quadOut);
       } else {
         this.x = targetX;
       }
@@ -364,6 +325,58 @@ export default class HeroTimeline extends PIXI.Container {
       marginY = Math.max(0, rendererHeight / heightGroupSize - blockSize);
     }
     return marginY;
+  }
+
+  private recalculateEdgeSpritePositions(
+    blockSize: number = this.calculateBlockSize(this.getDisplayHeight()),
+    marginX: number = this.calculateMarginX(blockSize)
+  ) {
+    for (const [, edge] of Object.entries(this.edgeKeysToEdges)) {
+      const edgeSprite =
+        this.edgeKeysToEdgeSprites[`${edge.fromBlockId}-${edge.toBlockId}`];
+      if (!edgeSprite) continue;
+
+      const fromSprite = this.blockKeysToBlockSprites[`${edge.fromBlockId}`];
+      const toSprite = this.blockKeysToBlockSprites[`${edge.toBlockId}`];
+      if (!fromSprite || !toSprite) continue;
+
+      const vectorX = toSprite.x - fromSprite.x;
+      const vectorY = toSprite.y - fromSprite.y;
+      const { blockBoundsVectorX, blockBoundsVectorY } =
+        HeroBlockSprite.clampVectorToBounds(blockSize, vectorX, vectorY);
+
+      edgeSprite.setVector(
+        vectorX,
+        vectorY,
+        blockSize,
+        marginX,
+        blockBoundsVectorX,
+        blockBoundsVectorY
+      );
+      edgeSprite.setToY(toSprite.y);
+      edgeSprite.x = fromSprite.x;
+      edgeSprite.y = fromSprite.y;
+    }
+  }
+
+  private markEdgeFollowWindow(durationMs: number) {
+    this.edgeFollowUntilMs = Math.max(
+      this.edgeFollowUntilMs,
+      performance.now() + durationMs + EDGE_FOLLOW_BUFFER_MS
+    );
+  }
+
+  private syncEdgesWithBlocks = () => {
+    if (performance.now() > this.edgeFollowUntilMs) return;
+    this.recalculateEdgeSpritePositions();
+  };
+
+  override destroy(options?: PIXI.IDestroyOptions | boolean) {
+    const appWithNullableTicker = this.application as PIXI.Application & {
+      ticker?: PIXI.Ticker | null;
+    };
+    appWithNullableTicker.ticker?.remove?.(this.syncEdgesWithBlocks);
+    super.destroy(options);
   }
 
   private getDisplayHeight() {
