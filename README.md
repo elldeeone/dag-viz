@@ -2,9 +2,14 @@
 
 Minimal DAG visualizer extracted from Kaspa Graph Inspector, optimized for production replay delivery.
 
+## Requirements
+
+- Node.js `20.19.0+` or `22.12.0+`
+
 ## Run
 
 ```bash
+nvm use
 npm install
 npm run dev
 ```
