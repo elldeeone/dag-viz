@@ -1,9 +1,9 @@
-import * as PIXI from "pixi.js-legacy";
+import * as PIXI from "pixi.js";
 import { Block, BlockColor } from "../data/types";
 import { heroTheme } from "./theme";
 
 const blockTextures = new Map<string, PIXI.RenderTexture>();
-type RendererLike = PIXI.Renderer | PIXI.AbstractRenderer;
+type RendererLike = PIXI.Renderer;
 const rendererFallbackIds = new WeakMap<RendererLike, number>();
 let nextRendererFallbackId = 1;
 
@@ -22,7 +22,11 @@ const getRendererContextKey = (renderer: RendererLike): string => {
 };
 
 const isTextureReusable = (texture: PIXI.RenderTexture | undefined): boolean =>
-  !!texture && texture.valid && texture.baseTexture.valid;
+  !!texture &&
+  !texture.destroyed &&
+  !texture.source.destroyed &&
+  texture.width > 0 &&
+  texture.height > 0;
 
 const getBlockTexture = (
   application: PIXI.Application,
@@ -36,30 +40,34 @@ const getBlockTexture = (
 
   if (!isTextureReusable(existing)) {
     const layout = heroTheme.getBlockLayout(blockColor);
-    const graphics = new PIXI.Graphics();
+    const graphics = new PIXI.Graphics()
+      .roundRect(
+        0,
+        0,
+        blockSize,
+        blockSize,
+        heroTheme.scale(heroTheme.block.roundingRadius, blockSize)
+      )
+      .fill(0xffffff);
+
     if (layout.borderWidth > 0) {
-      graphics.lineStyle(
-        heroTheme.scale(layout.borderWidth, blockSize),
-        layout.borderColor,
-        1,
-        0.5
-      );
+      graphics.stroke({
+        width: heroTheme.scale(layout.borderWidth, blockSize),
+        color: layout.borderColor,
+        alpha: 1,
+        alignment: 0.5,
+      });
     }
-    graphics.beginFill(0xffffff);
-    graphics.drawRoundedRect(
-      0,
-      0,
-      blockSize,
-      blockSize,
-      heroTheme.scale(heroTheme.block.roundingRadius, blockSize)
-    );
-    graphics.endFill();
 
     blockTextures.set(
       key,
-      application.renderer.generateTexture(graphics, {
-        scaleMode: PIXI.SCALE_MODES.LINEAR,
+      application.renderer.textureGenerator.generateTexture({
+        target: graphics,
         resolution,
+        antialias: true,
+        textureSourceOptions: {
+          scaleMode: PIXI.SCALE_MODES.LINEAR,
+        },
       })
     );
   }
@@ -77,7 +85,7 @@ export const destroyBlockTexturesForRenderer = (renderer: RendererLike) => {
   for (const [key, texture] of blockTextures.entries()) {
     if (!key.startsWith(rendererKeyPrefix)) continue;
 
-    if (texture.baseTexture.valid) {
+    if (!texture.destroyed) {
       texture.destroy(true);
     }
 
@@ -172,7 +180,7 @@ export default class HeroBlockSprite extends PIXI.Container {
       .toUpperCase();
     const displayHash = chunkSubstr(lastChars, lineLength).join("\n");
 
-    const text = new PIXI.Text(displayHash, style);
+    const text = new PIXI.Text({ text: displayHash, style });
     text.anchor.set(0.5, 0.5);
     return text;
   }

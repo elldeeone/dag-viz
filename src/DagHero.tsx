@@ -72,21 +72,46 @@ export default function DagHero({
     const dag = new HeroDag(scale);
     dagRef.current = dag;
 
-    dag.initialize(canvas);
+    let isDisposed = false;
 
-    if (snapshotReplayUrl) {
-      dag.loadSnapshotReplay(snapshotReplayUrl, snapshotPlaybackRate).catch((error) => {
-        console.error("[DAG Hero] Snapshot replay failed", error);
-      });
-    } else if (replayUrl) {
-      dag.loadReplay(replayUrl).catch((error) => {
-        console.error("[DAG Hero] Replay failed", error);
-      });
-    } else if (normalizedApiUrl) {
-      dag.loadAPI(normalizedApiUrl);
-    }
+    const startDag = async () => {
+      try {
+        await dag.initialize(canvas);
+      } catch (error) {
+        if (!isDisposed) {
+          console.error("[DAG Hero] Initialization failed", error);
+        }
+        return;
+      }
+
+      if (isDisposed) {
+        dag.stop();
+        return;
+      }
+
+      if (snapshotReplayUrl) {
+        dag
+          .loadSnapshotReplay(snapshotReplayUrl, snapshotPlaybackRate)
+          .catch((error) => {
+            if (!isDisposed) {
+              console.error("[DAG Hero] Snapshot replay failed", error);
+            }
+          });
+      } else if (replayUrl) {
+        dag.loadReplay(replayUrl).catch((error) => {
+          if (!isDisposed) {
+            console.error("[DAG Hero] Replay failed", error);
+          }
+        });
+      } else if (normalizedApiUrl) {
+        dag.loadAPI(normalizedApiUrl);
+      }
+    };
+
+    void startDag();
 
     return () => {
+      isDisposed = true;
       dag.stop();
       dagRef.current = null;
       if (canvas.parentNode) {
