@@ -2,7 +2,27 @@ import * as PIXI from "pixi.js-legacy";
 import { Block, BlockColor } from "../data/types";
 import { heroTheme } from "./theme";
 
-const blockTextures: { [key: string]: PIXI.RenderTexture } = {};
+const blockTextures = new Map<string, PIXI.RenderTexture>();
+type RendererLike = PIXI.Renderer | PIXI.AbstractRenderer;
+const rendererFallbackIds = new WeakMap<RendererLike, number>();
+let nextRendererFallbackId = 1;
+
+const getRendererContextKey = (renderer: RendererLike): string => {
+  if ("CONTEXT_UID" in renderer) {
+    return String(renderer.CONTEXT_UID);
+  }
+
+  let fallbackId = rendererFallbackIds.get(renderer);
+  if (!fallbackId) {
+    fallbackId = nextRendererFallbackId++;
+    rendererFallbackIds.set(renderer, fallbackId);
+  }
+
+  return `renderer-fallback-${fallbackId}`;
+};
+
+const isTextureReusable = (texture: PIXI.RenderTexture | undefined): boolean =>
+  !!texture && texture.valid && texture.baseTexture.valid;
 
 const getBlockTexture = (
   application: PIXI.Application,
@@ -10,8 +30,11 @@ const getBlockTexture = (
   blockColor: BlockColor
 ): PIXI.RenderTexture => {
   const resolution = application.renderer.resolution;
-  const key = `${blockSize}-${blockColor}-${resolution}`;
-  if (!blockTextures[key]) {
+  const rendererKey = getRendererContextKey(application.renderer);
+  const key = `${rendererKey}-${blockSize}-${blockColor}-${resolution}`;
+  const existing = blockTextures.get(key);
+
+  if (!isTextureReusable(existing)) {
     const layout = heroTheme.getBlockLayout(blockColor);
     const graphics = new PIXI.Graphics();
     if (layout.borderWidth > 0) {
@@ -32,12 +55,34 @@ const getBlockTexture = (
     );
     graphics.endFill();
 
-    blockTextures[key] = application.renderer.generateTexture(graphics, {
-      scaleMode: PIXI.SCALE_MODES.LINEAR,
-      resolution,
-    });
+    blockTextures.set(
+      key,
+      application.renderer.generateTexture(graphics, {
+        scaleMode: PIXI.SCALE_MODES.LINEAR,
+        resolution,
+      })
+    );
   }
-  return blockTextures[key];
+
+  const texture = blockTextures.get(key);
+  if (!texture) {
+    throw new Error("Failed to create DAG block texture.");
+  }
+
+  return texture;
+};
+
+export const destroyBlockTexturesForRenderer = (renderer: RendererLike) => {
+  const rendererKeyPrefix = `${getRendererContextKey(renderer)}-`;
+  for (const [key, texture] of blockTextures.entries()) {
+    if (!key.startsWith(rendererKeyPrefix)) continue;
+
+    if (texture.baseTexture.valid) {
+      texture.destroy(true);
+    }
+
+    blockTextures.delete(key);
+  }
 };
 
 function chunkSubstr(str: string, size: number): string[] {

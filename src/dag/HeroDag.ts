@@ -5,6 +5,7 @@ import ReplayDataSource from "../data/ReplayDataSource";
 import APIDataSource from "../data/APIDataSource";
 import SnapshotReplayDataSource from "../data/SnapshotReplayDataSource";
 import { heroTheme } from "./theme";
+import { destroyBlockTexturesForRenderer } from "./BlockSprite";
 import type { BlocksAndEdgesAndHeightGroups, ReplayData } from "../data/types";
 
 type DataSource = ReplayDataSource | APIDataSource | SnapshotReplayDataSource;
@@ -188,6 +189,7 @@ export default class HeroDag {
     this.dataSource?.destroy();
     this.dataSource = undefined;
     if (this.application) {
+      destroyBlockTexturesForRenderer(this.application.renderer);
       this.application.stop();
       // Don't pass true to destroy() - we manage canvas removal in React
       this.application.destroy(false, { children: true });
