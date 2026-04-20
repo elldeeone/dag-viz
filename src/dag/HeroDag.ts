@@ -1,4 +1,4 @@
-import * as PIXI from "pixi.js-legacy";
+import * as PIXI from "pixi.js";
 import { Ticker } from "@createjs/core";
 import HeroTimeline from "./HeroTimeline";
 import ReplayDataSource from "../data/ReplayDataSource";
@@ -28,27 +28,33 @@ export default class HeroDag {
     Ticker.timingMode = Ticker.RAF;
   }
 
-  initialize(canvas: HTMLCanvasElement) {
+  async initialize(canvas: HTMLCanvasElement) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const parentElement = canvas.parentElement!;
+    const parentElement = canvas.parentElement;
+    if (!parentElement) {
+      throw new Error("DAG Hero canvas must be attached before initialization.");
+    }
 
-    this.application = new PIXI.Application({
+    const application = new PIXI.Application();
+    await application.init({
       backgroundColor: heroTheme.background,
-      view: canvas,
+      canvas,
       resizeTo: parentElement,
       antialias: true,
       resolution: dpr,
       autoDensity: true,
+      autoStart: false,
     });
 
-    this.timeline = new HeroTimeline(this.application);
+    this.application = application;
+    this.timeline = new HeroTimeline(application);
     this.timeline.setScaleGetter(() => this.currentScale);
-    this.application.stage.addChild(this.timeline);
+    application.stage.addChild(this.timeline);
 
     // Resize check
-    this.application.ticker.add(this.resizeIfRequired);
+    application.ticker.add(this.resizeIfRequired);
 
-    this.application.start();
+    application.start();
 
     // IntersectionObserver to pause when offscreen
     this.observer = new IntersectionObserver(

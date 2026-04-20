@@ -1,4 +1,4 @@
-import * as PIXI from "pixi.js-legacy";
+import * as PIXI from "pixi.js";
 import { Ease, Tween } from "@createjs/tweenjs";
 import {
   Block,
@@ -371,7 +371,7 @@ export default class HeroTimeline extends PIXI.Container {
     this.recalculateEdgeSpritePositions();
   };
 
-  override destroy(options?: PIXI.IDestroyOptions | boolean) {
+  override destroy(options?: PIXI.DestroyOptions) {
     const appWithNullableTicker = this.application as PIXI.Application & {
       ticker?: PIXI.Ticker | null;
     };

@@ -1,5 +1,4 @@
-import "@pixi/graphics-extras";
-import * as PIXI from "pixi.js-legacy";
+import * as PIXI from "pixi.js";
 import { heroTheme } from "./theme";
 
 export default class HeroEdgeSprite extends PIXI.Container {
@@ -79,20 +78,13 @@ export default class HeroEdgeSprite extends PIXI.Container {
     const arrowY = toY + arrowOffsetY;
 
     this.graphics.clear();
-    this.graphics.lineStyle(lineWidth, color);
-    this.graphics.moveTo(0, 0);
-    this.graphics.lineTo(toX + arrowOffsetX, toY + arrowOffsetY);
-
-    this.graphics.beginFill(color);
-    (this.graphics as any).drawStar(
-      arrowX,
-      arrowY,
-      3,
-      arrowRadius,
-      0,
-      angleRadians
-    );
-    this.graphics.endFill();
+    this.graphics
+      .moveTo(0, 0)
+      .lineTo(toX + arrowOffsetX, toY + arrowOffsetY)
+      .stroke({ width: lineWidth, color });
+    this.graphics
+      .star(arrowX, arrowY, 3, arrowRadius, 0, angleRadians)
+      .fill(color);
   }
 
   setToY(toY: number) {
