@@ -66,7 +66,7 @@ const getBlockTexture = (
         resolution,
         antialias: true,
         textureSourceOptions: {
-          scaleMode: PIXI.SCALE_MODES.LINEAR,
+          scaleMode: "linear",
         },
       })
     );
