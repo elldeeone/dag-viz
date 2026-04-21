@@ -1,12 +1,34 @@
-# DAG Hero
+# dag-viz
 
-Minimal DAG visualizer extracted from Kaspa Graph Inspector, optimized for production replay delivery.
+A lightweight extraction of the original [Kaspa Graph Inspector](https://github.com/kaspa-live/kaspa-graph-inspector) renderer, built to preserve the exact look and feel of the OG DAG visualization while making it portable enough to embed on any site.
+
+`dag-viz` can render live data from a KGI-compatible API or play back compressed recordings of real DAG activity. That means you can ship a faithful Kaspa DAG visual without running the full Graph Inspector stack.
+
+## Why This Exists
+
+The original Kaspa Graph Inspector DAG visual had a look and feel that was hard to reproduce well from scratch.
+
+This repo exists to preserve that original visual as faithfully as possible, while stripping away the heavier parts of Graph Inspector so it can be embedded anywhere.
+
+## What This Is
+
+- The original KGI DAG renderer, extracted and simplified
+- A lightweight frontend built with React, PixiJS 8, and Vite 8
+- A renderer that can use live API data or compressed replay artifacts
+- A way to ship real DAG motion in a portable format
+
+## What This Isn't
+
+- Not the full Kaspa Graph Inspector stack
+- Not a processing node, database, or API backend
+- Not a redesign or reinterpretation of the KGI visual style
 
 ## Requirements
 
 - Node.js `20.19.0+` or `22.12.0+`
+- Node 21 is not supported
 
-## Run
+## Quick Start
 
 ```bash
 nvm use
@@ -14,53 +36,73 @@ npm install
 npm run dev
 ```
 
-## Modes
-
-Live API mode is default:
+Open:
 
 ```text
 http://localhost:5173/
 ```
 
-Override API URL:
+## Modes
+
+Open the app at:
+
+```text
+http://localhost:5173/
+```
+
+By default, `dag-viz` runs in live mode and points to a KGI-compatible API.
+
+### Use a Live API
+
+Default live mode:
+
+```text
+http://localhost:5173/
+```
+
+Point live mode at a different API:
 
 ```text
 http://localhost:5173/?api=https://kgi.kaspad.net:3147
 http://localhost:5173/?api=kgi.kaspad.net
 ```
 
-Snapshot replay mode (compressed replay recommended):
+### Use a Recorded Snapshot
+
+Snapshot mode plays back a compressed recording of real DAG activity.
+
+This repo includes a sample snapshot replay at:
+
+```text
+/replay/mainnet-60s-compressed.json
+```
+
+Use it like this:
 
 ```text
 http://localhost:5173/?mode=snapshot&snapshot=/replay/mainnet-60s-compressed.json
 ```
 
-Legacy synthetic replay mode:
-
-```text
-http://localhost:5173/?mode=replay&replay=/replay/ghostdag-10bps-k18.json
-```
-
 Optional query params:
 
 ```text
-&scale=0.4
-&speed=1
+?scale=0.4
+?mode=snapshot&snapshot=/replay/mainnet-60s-compressed.json&scale=0.4&speed=1
 ```
 
-`speed` applies to snapshot replay only (`1` is real-time, `0.5` is half-speed, `2` is double-speed).
+`scale` works in both live and snapshot mode.
 
-## Replay Artifacts
+`speed` applies to snapshot mode only. `1` is real-time, `0.5` is half-speed, and `2` is double-speed.
 
-Production replay artifact:
-- `public/replay/mainnet-60s-compressed.json` (`v:2` compressed format)
+## Included Replay
 
-Debug replay artifact:
-- `debug/replay/mainnet-60s.json` (full uncompressed snapshot, gitignored)
+This repo ships with a sample recorded replay:
 
-## Record Live Snapshot
+- `public/replay/mainnet-60s-compressed.json`
 
-Record mainnet for 60s:
+## Record a Real Replay
+
+Record mainnet for 60 seconds:
 
 ```bash
 npm run record:mainnet-60s
@@ -74,37 +116,7 @@ npm run record:snapshot -- \
   --duration-ms 60000 \
   --poll-interval-ms 200 \
   --height-difference 14 \
-  --out debug/replay/mainnet-60s.json \
   --compressed-out public/replay/mainnet-60s-compressed.json
 ```
 
-Notes:
-- Recorder default cadence is live-compatible (`next poll starts after response + poll interval`).
-- Add `--fixed-rate` only if you want fixed schedule capture.
-
-## Performance Budgets
-
-Run performance budget checks locally:
-
-```bash
-npm run perf:check
-```
-
-Checks include:
-- Built JS bundle raw size budget
-- Built JS bundle gzip size budget
-- Compressed replay size budget
-- Enforce compressed replay marker (`v=2`)
-- Enforce no full replay in `public/replay/mainnet-60s.json`
-
-CI runs this automatically via `.github/workflows/perf-budget.yml`.
-
-## Deployment Caching
-
-Cache header config included:
-- `public/_headers` for Netlify/Cloudflare Pages style hosting
-- `vercel.json` for Vercel headers
-
-Recommended:
-- Serve `dist/` behind Brotli + gzip compression
-- Keep immutable cache for `/assets/*` and `/replay/*`
+The recorder defaults to a live-compatible cadence, where the next poll starts after the previous response plus the poll interval. Add `--fixed-rate` only if you want fixed schedule capture.
