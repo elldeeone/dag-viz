@@ -1,14 +1,13 @@
 import * as PIXI from "pixi.js";
 import { Ticker } from "@createjs/core";
 import HeroTimeline from "./HeroTimeline";
-import ReplayDataSource from "../data/ReplayDataSource";
 import APIDataSource from "../data/APIDataSource";
 import SnapshotReplayDataSource from "../data/SnapshotReplayDataSource";
 import { heroTheme } from "./theme";
 import { destroyBlockTexturesForRenderer } from "./BlockSprite";
-import type { BlocksAndEdgesAndHeightGroups, ReplayData } from "../data/types";
+import type { BlocksAndEdgesAndHeightGroups } from "../data/types";
 
-type DataSource = ReplayDataSource | APIDataSource | SnapshotReplayDataSource;
+type DataSource = APIDataSource | SnapshotReplayDataSource;
 
 export default class HeroDag {
   private application: PIXI.Application | undefined;
@@ -80,24 +79,6 @@ export default class HeroDag {
     const ds = new APIDataSource(apiUrl);
     this.dataSource = ds;
     ds.startPolling(14);
-    this.run();
-  }
-
-  async loadReplay(url: string) {
-    console.info(`[DAG Hero] Replay mode: ${url}`);
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error(`Replay fetch failed (${resp.status} ${resp.statusText})`);
-    }
-
-    const replayData: ReplayData = await resp.json();
-    const ds = new ReplayDataSource(replayData);
-    this.dataSource = ds;
-
-    ds.setOnNewBlock(() => {
-      // Debounce - only update on tick
-    });
-
     this.run();
   }
 

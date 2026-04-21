@@ -35,7 +35,6 @@ const normalizeApiUrl = (rawUrl: string): string => {
 
 interface DagHeroProps {
   apiUrl?: string;
-  replayUrl?: string;
   snapshotReplayUrl?: string;
   snapshotPlaybackRate?: number;
   scale?: number;
@@ -45,7 +44,6 @@ interface DagHeroProps {
 
 export default function DagHero({
   apiUrl = DEFAULT_API_URL,
-  replayUrl,
   snapshotReplayUrl,
   snapshotPlaybackRate = 1,
   scale = 0.4,
@@ -97,12 +95,6 @@ export default function DagHero({
               console.error("[DAG Hero] Snapshot replay failed", error);
             }
           });
-      } else if (replayUrl) {
-        dag.loadReplay(replayUrl).catch((error) => {
-          if (!isDisposed) {
-            console.error("[DAG Hero] Replay failed", error);
-          }
-        });
       } else if (normalizedApiUrl) {
         dag.loadAPI(normalizedApiUrl);
       }
@@ -118,7 +110,7 @@ export default function DagHero({
         canvas.parentNode.removeChild(canvas);
       }
     };
-  }, [normalizedApiUrl, replayUrl, snapshotPlaybackRate, snapshotReplayUrl, scale]);
+  }, [normalizedApiUrl, snapshotPlaybackRate, snapshotReplayUrl, scale]);
 
   return (
     <div

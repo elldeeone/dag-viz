@@ -6,16 +6,14 @@ const DagHero = React.lazy(() => import("./DagHero"));
 const DEFAULT_SCALE = 0.4;
 const DEFAULT_API_URL = "https://kgi.kaspad.net:3147";
 const DEFAULT_SNAPSHOT_REPLAY_URL = "/replay/mainnet-60s-compressed.json";
-const DEFAULT_REPLAY_URL = "/replay/ghostdag-10bps-k18.json";
 
-type AppMode = "api" | "snapshot" | "replay";
+type AppMode = "api" | "snapshot";
 
 type AppConfig = {
   mode: AppMode;
   apiUrl?: string;
   snapshotReplayUrl?: string;
   snapshotPlaybackRate: number;
-  replayUrl?: string;
   scale: number;
 };
 
@@ -37,7 +35,6 @@ const resolveAppConfig = (): AppConfig => {
   const modeParam = params.get("mode");
   const apiParam = params.get("api");
   const snapshotParam = params.get("snapshot");
-  const replayParam = params.get("replay");
   const scale = parseScale(params.get("scale"));
   const snapshotPlaybackRate = parsePlaybackRate(params.get("speed"));
 
@@ -45,15 +42,6 @@ const resolveAppConfig = (): AppConfig => {
     return {
       mode: "snapshot",
       snapshotReplayUrl: snapshotParam || DEFAULT_SNAPSHOT_REPLAY_URL,
-      snapshotPlaybackRate,
-      scale,
-    };
-  }
-
-  if (replayParam || modeParam === "replay") {
-    return {
-      mode: "replay",
-      replayUrl: replayParam || DEFAULT_REPLAY_URL,
       snapshotPlaybackRate,
       scale,
     };
@@ -76,8 +64,6 @@ function App() {
           snapshotReplayUrl: appConfig.snapshotReplayUrl,
           snapshotPlaybackRate: appConfig.snapshotPlaybackRate,
         }
-      : appConfig.mode === "replay"
-      ? { replayUrl: appConfig.replayUrl }
       : { apiUrl: appConfig.apiUrl };
 
   return (
