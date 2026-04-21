@@ -42,7 +42,7 @@ Open:
 http://localhost:5173/
 ```
 
-## Modes
+## Viewing Modes
 
 Open the app at:
 
@@ -71,44 +71,43 @@ http://localhost:5173/?api=kgi.kaspad.net
 
 Snapshot mode plays back a compressed recording of real DAG activity.
 
-This repo includes a sample snapshot replay at:
+This repo includes a sample replay at:
 
 ```text
 /replay/mainnet-60s-compressed.json
 ```
 
-Use it like this:
+Open it like this:
 
 ```text
 http://localhost:5173/?mode=snapshot&snapshot=/replay/mainnet-60s-compressed.json
 ```
 
-Optional query params:
+Example with playback settings:
 
 ```text
-?scale=0.4
-?mode=snapshot&snapshot=/replay/mainnet-60s-compressed.json&scale=0.4&speed=1
+http://localhost:5173/?mode=snapshot&snapshot=/replay/mainnet-60s-compressed.json&scale=0.4&speed=1
 ```
 
 `scale` works in both live and snapshot mode.
 
 `speed` applies to snapshot mode only. `1` is real-time, `0.5` is half-speed, and `2` is double-speed.
 
-## Included Replay
+## Refresh the Bundled Replay
 
-This repo ships with a sample recorded replay:
-
-- `public/replay/mainnet-60s-compressed.json`
-
-## Record a Real Replay
-
-Record mainnet for 60 seconds:
+Refresh the sample replay included in this repo:
 
 ```bash
 npm run record:mainnet-60s
 ```
 
-Custom recording:
+This overwrites:
+
+- `public/replay/mainnet-60s-compressed.json`
+
+## Custom Recording
+
+Record a replay with your own settings:
 
 ```bash
 npm run record:snapshot -- \
