@@ -7,7 +7,7 @@ const DEFAULT_API_URL = "https://kgi.kaspad.net:3147";
 const DEFAULT_DURATION_MS = 60_000;
 const DEFAULT_POLL_INTERVAL_MS = 200;
 const DEFAULT_HEIGHT_DIFFERENCE = 14;
-const DEFAULT_OUT_PATH = "debug/replay/mainnet-60s.json";
+const DEFAULT_OUT_PATH = "public/replay/mainnet-60s-compressed.json";
 
 const COLOR_TO_CODE = {
   blue: 0,
@@ -25,8 +25,9 @@ Options:
   --duration-ms <ms>         Total recording duration (default: ${DEFAULT_DURATION_MS})
   --poll-interval-ms <ms>    Poll interval (default: ${DEFAULT_POLL_INTERVAL_MS})
   --height-difference <n>    heightDifference query value (default: ${DEFAULT_HEIGHT_DIFFERENCE})
-  --out <path>               Output path for full snapshot JSON (debug artifact, default: ${DEFAULT_OUT_PATH})
-  --compressed-out <path>    Optional output path for compressed v2 JSON (recommended for production)
+  --out <path>               Output path for compressed replay JSON (default: ${DEFAULT_OUT_PATH})
+  --raw-out <path>           Optional output path for full raw snapshot JSON (debug only)
+  --compressed-out <path>    Deprecated alias for --out
   --fixed-rate               Use fixed schedule polling (default is live-compatible cadence)
   --pretty                   Pretty-print JSON output
   --help                     Show this help
@@ -37,8 +38,15 @@ Examples:
     --duration-ms 60000 \\
     --poll-interval-ms 200 \\
     --height-difference 14 \\
-    --out debug/replay/mainnet-60s.json \\
-    --compressed-out public/replay/mainnet-60s-compressed.json
+    --out public/replay/mainnet-60s-compressed.json
+
+  node scripts/record-snapshot.mjs \\
+    --api-url https://kgi.kaspad.net:3147 \\
+    --duration-ms 60000 \\
+    --poll-interval-ms 200 \\
+    --height-difference 14 \\
+    --out public/replay/mainnet-60s-compressed.json \\
+    --raw-out debug/replay/mainnet-60s.json
 `);
 };
 
@@ -79,7 +87,7 @@ const parseArgs = (argv) => {
     pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
     heightDifference: DEFAULT_HEIGHT_DIFFERENCE,
     outPath: DEFAULT_OUT_PATH,
-    compressedOutPath: null,
+    rawOutPath: null,
     fixedRate: false,
     pretty: false,
   };
@@ -128,8 +136,11 @@ const parseArgs = (argv) => {
       case "--out":
         args.outPath = value;
         break;
+      case "--raw-out":
+        args.rawOutPath = value;
+        break;
       case "--compressed-out":
-        args.compressedOutPath = value;
+        args.outPath = value;
         break;
       default:
         throw new Error(`Unknown option: ${token}`);
@@ -340,6 +351,10 @@ const main = async () => {
   console.log(`[record] durationMs       : ${args.durationMs}`);
   console.log(`[record] pollIntervalMs   : ${args.pollIntervalMs}`);
   console.log(`[record] heightDifference : ${args.heightDifference}`);
+  console.log(`[record] out              : ${args.outPath}`);
+  if (args.rawOutPath) {
+    console.log(`[record] rawOut           : ${args.rawOutPath}`);
+  }
   console.log(
     `[record] mode             : ${
       args.fixedRate ? "fixed-rate" : "live-compatible"
@@ -414,17 +429,13 @@ const main = async () => {
     );
   }
 
-  const fullPath = await writeJson(args.outPath, snapshot, args.pretty);
-  console.log(`[record] wrote snapshot: ${fullPath}`);
+  const compressed = buildCompressedReplay(snapshot);
+  const outPath = await writeJson(args.outPath, compressed, args.pretty);
+  console.log(`[record] wrote replay: ${outPath}`);
 
-  if (args.compressedOutPath) {
-    const compressed = buildCompressedReplay(snapshot);
-    const compressedPath = await writeJson(
-      args.compressedOutPath,
-      compressed,
-      args.pretty
-    );
-    console.log(`[record] wrote compressed snapshot: ${compressedPath}`);
+  if (args.rawOutPath) {
+    const rawOutPath = await writeJson(args.rawOutPath, snapshot, args.pretty);
+    console.log(`[record] wrote raw snapshot: ${rawOutPath}`);
   }
 };
 

@@ -116,7 +116,19 @@ npm run record:snapshot -- \
   --duration-ms 60000 \
   --poll-interval-ms 200 \
   --height-difference 14 \
-  --compressed-out public/replay/mainnet-60s-compressed.json
+  --out public/replay/mainnet-60s-compressed.json
+```
+
+Optional debug output:
+
+```bash
+npm run record:snapshot -- \
+  --api-url https://kgi.kaspad.net:3147 \
+  --duration-ms 60000 \
+  --poll-interval-ms 200 \
+  --height-difference 14 \
+  --out public/replay/mainnet-60s-compressed.json \
+  --raw-out debug/replay/mainnet-60s.json
 ```
 
 The recorder defaults to a live-compatible cadence, where the next poll starts after the previous response plus the poll interval. Add `--fixed-rate` only if you want fixed schedule capture.
