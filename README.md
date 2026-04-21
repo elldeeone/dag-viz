@@ -4,6 +4,8 @@ A lightweight extraction of the original [Kaspa Graph Inspector](https://github.
 
 `dag-viz` can render live data from a KGI-compatible API or play back compressed recordings of real DAG activity. That means you can ship a faithful Kaspa DAG visual without running the full Graph Inspector stack.
 
+This project contains code extracted and modified from KGI and is distributed under the ISC license. See [LICENSE](./LICENSE) for attribution and licensing details.
+
 ## Why This Exists
 
 The original Kaspa Graph Inspector DAG visual had a look and feel that was hard to reproduce well from scratch.
